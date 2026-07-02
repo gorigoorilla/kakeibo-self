@@ -303,6 +303,13 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
     </div>
   </div>
 </div>
+<div class="modal-bg" id="card-detail-bg">
+  <div class="modal">
+    <button class="modal-close" id="card-detail-close">×</button>
+    <div class="modal-title" id="card-detail-title"></div>
+    <div id="card-detail-list" style="max-height:60vh;overflow-y:auto;"></div>
+  </div>
+</div>
 <div id="day-modal-bg">
   <div id="day-modal">
     <button id="day-modal-close">×</button>
@@ -429,17 +436,44 @@ function renderCardBudgets(){
     const remain=budget-use;
     const pct=Math.min(100,Math.round(use/budget*100));
     const color=pct>=100?'#c94a1a':pct>=80?'#e07050':'#4ac090';
-    html+=`<div class="cb-item">
+    html+=`<div class="cb-item" onclick="window.showCardDetail('${c}')" style="cursor:pointer;">
       <div class="cb-top">
         <div class="cb-name">💳 ${c}</div>
         <div class="cb-amounts">¥${use.toLocaleString()} / ¥${budget.toLocaleString()}</div>
       </div>
       <div class="cb-bar"><div class="cb-fill" style="width:${pct}%;background:${color};"></div></div>
-      <div class="cb-remain" style="color:${remain>=0?'var(--inc)':'var(--exp)'}">残り ¥${remain.toLocaleString()}</div>
+      <div class="cb-remain" style="color:${remain>=0?'var(--inc)':'var(--exp)'}">残り ¥${remain.toLocaleString()} ›</div>
     </div>`;
   });
   el.innerHTML=html;
 }
+
+window.showCardDetail=function(card){
+  const cardRecs=records.filter(r=>r.card===card&&r.type==='exp').sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('card-detail-title').textContent='💳 '+card+' の明細';
+  if(!cardRecs.length){
+    document.getElementById('card-detail-list').innerHTML='<div class="empty">記録なし</div>';
+  } else {
+    const total=cardRecs.reduce((s,r)=>s+r.amount,0);
+    document.getElementById('card-detail-list').innerHTML=
+      `<div style="text-align:center;padding:8px 0 12px;font-size:14px;font-weight:700;color:var(--exp)">合計 -¥${total.toLocaleString()}</div>`+
+      cardRecs.map(r=>{
+        const d=new Date(r.createdAt);
+        const ds=(d.getMonth()+1)+'/'+d.getDate();
+        return `<div class="day-item" style="margin-bottom:8px;">
+          <div class="day-item-ico" style="background:#fdf0eb">${CI[r.cat]||'📦'}</div>
+          <div class="day-item-body">
+            <div class="day-item-cat">${r.cat}</div>
+            <div class="day-item-note">${ds}${r.note?' · '+r.note:''}</div>
+          </div>
+          <div class="day-item-amt" style="color:var(--exp)">-¥${r.amount.toLocaleString()}</div>
+        </div>`;
+      }).join('');
+  }
+  document.getElementById('card-detail-bg').classList.add('on');
+};
+document.getElementById('card-detail-close').addEventListener('click',()=>document.getElementById('card-detail-bg').classList.remove('on'));
+document.getElementById('card-detail-bg').addEventListener('click',e=>{if(e.target===document.getElementById('card-detail-bg'))document.getElementById('card-detail-bg').classList.remove('on');});
 
 function renderFixedList(){
   const el=document.getElementById('fixed-list');if(!el)return;
@@ -594,7 +628,7 @@ window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();
 // 固定費を月の記録に自動反映
 async function applyFixedExpenses(){
   if(!settings.fixedExp||!settings.fixedExp.length)return;
-  const monthKey=cy+'-'+cm;
+  const monthKey=cy+'-'+String(cm).padStart(2,'0');
   const appliedKey='fixedApplied_'+monthKey;
   // 既にこの月に適用済みかチェック
   try{
@@ -614,7 +648,7 @@ async function applyFixedExpenses(){
     await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:cy,month:cm,createdAt:d.getTime(),isFixed:true});
   }
   // 適用済みフラグを保存
-  await setDoc(doc(db,'users',uid,'meta',appliedKey),{applied:true,at:Date.now()});
+  await setDoc(doc(db,'users',uid,'meta',appliedKey),{applied:true,at:Date.now(),month:cm,year:cy});
   toast('固定費を自動反映しました ✓');
 }
 

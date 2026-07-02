@@ -185,8 +185,9 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           </div>
           <div class="fgrid">
             <div class="ff"><label>日付</label><input type="date" id="inc-date"></div>
-            <div class="ff"><label>メモ</label><input type="text" id="inc-note" placeholder="任意"></div>
+            <div class="ff"><label>支払方法</label><select id="inc-card"></select></div>
           </div>
+          <input class="fnote" id="inc-note" placeholder="メモ（任意）" style="margin-bottom:10px;">
           <button class="fbtn" style="background:var(--inc);" id="btn-inc">＋ 収入を追加</button>
         </div>
         <div class="fsec">
@@ -197,8 +198,9 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           </div>
           <div class="fgrid">
             <div class="ff"><label>日付</label><input type="date" id="exp-date"></div>
-            <div class="ff"><label>メモ</label><input type="text" id="exp-note" placeholder="任意"></div>
+            <div class="ff"><label>支払方法</label><select id="exp-card"></select></div>
           </div>
+          <input class="fnote" id="exp-note" placeholder="メモ（任意）" style="margin-bottom:10px;">
           <button class="fbtn" style="background:var(--exp);" id="btn-exp">－ 支出を追加</button>
         </div>
       </div>
@@ -240,6 +242,19 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           <div id="exp-cat-list"></div>
           <div class="cat-add-row"><input class="cat-add-input" id="exp-cat-new" placeholder="新しいカテゴリ"><button class="cat-add-btn" id="exp-cat-add">追加</button></div>
         </div>
+        <div class="set-sec">
+          <div class="set-head">カード・支払方法</div>
+          <div id="card-list"></div>
+          <div class="cat-add-row">
+            <input class="cat-add-input" id="card-new" placeholder="例：楽天カード">
+            <button class="cat-add-btn" id="card-add">追加</button>
+          </div>
+        </div>
+        <div class="set-sec">
+          <div class="set-head">固定費（毎月・毎年自動入力）</div>
+          <div id="fixed-list"></div>
+          <button class="cat-add-btn" id="fixed-add" style="width:100%;height:44px;margin-top:12px;">＋ 固定費を追加</button>
+        </div>
         <button class="set-save-btn" id="save-settings">設定を保存</button>
       </div>
     </div>
@@ -251,6 +266,34 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
     <div class="ni" data-page="hist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>履歴</span></div>
     <div class="ni" data-page="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>カレンダー</span></div>
     <div class="ni" data-page="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>設定</span></div>
+  </div>
+</div>
+<div class="modal-bg" id="fixed-modal-bg">
+  <div class="modal">
+    <button class="modal-close" id="fixed-modal-close">×</button>
+    <div class="modal-title">固定費を追加</div>
+    <div class="modal-row"><div class="modal-label">名前</div><input class="modal-input" id="fixed-name" placeholder="例：Netflix、携帯料金"></div>
+    <div class="modal-row"><div class="modal-label">金額（円）</div><input class="modal-input" type="number" id="fixed-amt" inputmode="numeric"></div>
+    <div class="modal-row"><div class="modal-label">カテゴリ</div><select class="modal-select" id="fixed-cat"></select></div>
+    <div class="modal-row"><div class="modal-label">支払方法</div><select class="modal-select" id="fixed-card"></select></div>
+    <div class="modal-row"><div class="modal-label">頻度</div>
+      <select class="modal-select" id="fixed-freq">
+        <option value="monthly">毎月</option>
+        <option value="yearly">毎年</option>
+      </select>
+    </div>
+    <div class="modal-row" id="fixed-month-row"><div class="modal-label">引き落とし月（毎年の場合）</div>
+      <select class="modal-select" id="fixed-month">
+        <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+        <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+        <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+        <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" id="fixed-modal-cancel">キャンセル</button>
+      <button class="modal-btn save" id="fixed-modal-ok">追加</button>
+    </div>
   </div>
 </div>
 <div id="day-modal-bg">
@@ -283,7 +326,7 @@ const auth=getAuth(fbapp);
 const provider=new GoogleAuthProvider();
 let uid=null,cy=new Date().getFullYear(),cm=new Date().getMonth();
 let curTab='home',records=[],pieInst=null,barInst=null,unsubscribe=null,editingId=null;
-let settings={incCats:['給与','ボーナス','副収入','その他'],expCats:['食費','家賃','光熱費','交通費','日用品','外食','医療費','娯楽','被服費','その他']};
+let settings={incCats:['給与','ボーナス','副収入','その他'],expCats:['食費','家賃','光熱費','交通費','日用品','外食','医療費','娯楽','被服費','サブスク','その他'],cards:['現金','楽天カード','PayPay'],fixedExp:[]};
 const CI={食費:'🍚',家賃:'🏠',光熱費:'💡',交通費:'🚃',日用品:'🧴',外食:'🍜',医療費:'💊',娯楽:'🎮',被服費:'👕',その他:'📦',給与:'💰',ボーナス:'🎁',副収入:'📈'};
 const CC={食費:'#c94a1a',家賃:'#2d4a8a',光熱費:'#b87a00',交通費:'#5a3a8a',日用品:'#3a6a3a',外食:'#8a3a1a',医療費:'#aa3355',娯楽:'#1a8a5a',被服費:'#2a7a3a',その他:'#888'};
 const COLORS=['#c94a1a','#2d4a8a','#b87a00','#5a3a8a','#3a6a3a','#8a3a1a','#aa3355','#1a8a5a','#2a7a3a','#888','#4a7aaa','#aa6a2a'];
@@ -302,7 +345,7 @@ onAuthStateChanged(auth,async user=>{
     uid=user.uid;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
-    await loadSettings();applySettings();subscribe();initDateInputs();
+    await loadSettings();applySettings();subscribe();initDateInputs();setTimeout(applyFixedExpenses,2000);
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -314,11 +357,26 @@ onAuthStateChanged(auth,async user=>{
 });
 async function loadSettings(){try{const d=await getDoc(settingsDoc());if(d.exists())settings={...settings,...d.data()};}catch(e){}}
 async function saveSettings(){try{await setDoc(settingsDoc(),settings);toast('設定を保存しました ✓');applySettings();}catch(e){toast('保存に失敗しました');}}
+function renderCardSelect(id){
+  const opts=settings.cards.map(c=>`<option>${c}</option>`).join('');
+  const el=document.getElementById(id);if(el)el.innerHTML=opts;
+}
 function applySettings(){
   document.getElementById('inc-cat').innerHTML=settings.incCats.map(c=>`<option>${c}</option>`).join('');
   document.getElementById('exp-cat').innerHTML=settings.expCats.map(c=>`<option>${c}</option>`).join('');
+  renderCardSelect('inc-card');renderCardSelect('exp-card');
   renderCatList('inc-cat-list',settings.incCats,'inc');
   renderCatList('exp-cat-list',settings.expCats,'exp');
+  renderCardList();renderFixedList();
+}
+function renderCardList(){
+  const el=document.getElementById('card-list');if(!el)return;
+  el.innerHTML=(settings.cards||[]).map((c,i)=>`<div class="cat-item"><span class="cat-name">💳 ${c}</span><button class="cat-del" onclick="window.delCard(${i})">×</button></div>`).join('');
+}
+function renderFixedList(){
+  const el=document.getElementById('fixed-list');if(!el)return;
+  if(!settings.fixedExp||!settings.fixedExp.length){el.innerHTML='<div style="font-size:13px;color:var(--t3);padding:8px 0;">固定費なし</div>';return;}
+  el.innerHTML=settings.fixedExp.map((f,i)=>`<div class="cat-item"><div><div class="cat-name">${f.name} <span style="font-size:11px;color:var(--t3)">${f.freq==='monthly'?'毎月':'毎年'+f.month+'月'}</span></div><div style="font-size:12px;color:var(--exp)">-¥${f.amount.toLocaleString()} / ${f.card||'現金'}</div></div><button class="cat-del" onclick="window.delFixed(${i})">×</button></div>`).join('');
 }
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function initDateInputs(){const t=todayStr();const id=document.getElementById('inc-date');const ed=document.getElementById('exp-date');if(id)id.value=t;if(ed)ed.value=t;}
@@ -346,7 +404,7 @@ function hiHtml(r,withDel){
   const s=r.type==='inc'?'+':'-';const cl=r.type==='inc'?'var(--inc)':'var(--exp)';
   const bg=r.type==='inc'?'background:#e8f5ee':'background:#fdf0eb';
   const del=withDel?`<button class="xbtn" onclick="event.stopPropagation();window.delR('${r.id}')">×</button>`:'';
-  return `<div class="hi" onclick="window.editR('${r.id}')"><div class="hico" style="${bg}">${CI[r.cat]||'📦'}</div><div class="hbody"><div class="hcat">${r.cat}</div><div class="hmeta">${r.note||'　'}</div></div><div style="text-align:right;"><div class="hamt" style="color:${cl}">${s}${fmt(r.amount)}</div></div>${del}</div>`;
+  const cardLabel=r.card&&r.card!=='現金'?`💳${r.card}`:r.card==='現金'?'💴現金':'';return `<div class="hi" onclick="window.editR('${r.id}')"><div class="hico" style="${bg}">${CI[r.cat]||'📦'}</div><div class="hbody"><div class="hcat">${r.cat}</div><div class="hmeta">${[r.note,cardLabel].filter(Boolean).join(' · ')||'　'}</div></div><div style="text-align:right;"><div class="hamt" style="color:${cl}">${s}${fmt(r.amount)}</div></div>${del}</div>`;
 }
 function renderRecent(){const el=document.getElementById('recent-list');if(!records.length){el.innerHTML='<div class="empty">記録がありません</div>';return;}el.innerHTML=records.map(r=>hiHtml(r,true)).join('');}
 function renderHist(){const el=document.getElementById('hist-list');if(!records.length){el.innerHTML='<div class="empty">記録がありません</div>';return;}el.innerHTML=records.map(r=>hiHtml(r,true)).join('');}
@@ -384,7 +442,7 @@ document.getElementById('btn-inc').addEventListener('click',async()=>{
   const a=parseFloat(document.getElementById('inc-amt').value);if(!a||a<=0){toast('金額を入力してください');return;}
   try{const incDateStr=document.getElementById('inc-date').value||todayStr();
     const incDate=new Date(incDateStr);
-    await addDoc(recCol(),{type:'inc',amount:a,cat:document.getElementById('inc-cat').value,note:document.getElementById('inc-note').value.trim(),year:incDate.getFullYear(),month:incDate.getMonth(),createdAt:incDate.getTime()+43200000});
+    await addDoc(recCol(),{type:'inc',amount:a,cat:document.getElementById('inc-cat').value,card:document.getElementById('inc-card').value,note:document.getElementById('inc-note').value.trim(),year:incDate.getFullYear(),month:incDate.getMonth(),createdAt:incDate.getTime()+43200000});
     document.getElementById('inc-amt').value='';document.getElementById('inc-note').value='';
     document.getElementById('inc-date').value=todayStr();
     toast('収入を追加しました ✓');}
@@ -394,13 +452,83 @@ document.getElementById('btn-exp').addEventListener('click',async()=>{
   const a=parseFloat(document.getElementById('exp-amt').value);if(!a||a<=0){toast('金額を入力してください');return;}
   try{const expDateStr=document.getElementById('exp-date').value||todayStr();
     const expDate=new Date(expDateStr);
-    await addDoc(recCol(),{type:'exp',amount:a,cat:document.getElementById('exp-cat').value,note:document.getElementById('exp-note').value.trim(),year:expDate.getFullYear(),month:expDate.getMonth(),createdAt:expDate.getTime()+43200000});
+    await addDoc(recCol(),{type:'exp',amount:a,cat:document.getElementById('exp-cat').value,card:document.getElementById('exp-card').value,note:document.getElementById('exp-note').value.trim(),year:expDate.getFullYear(),month:expDate.getMonth(),createdAt:expDate.getTime()+43200000});
     document.getElementById('exp-amt').value='';document.getElementById('exp-note').value='';
     document.getElementById('exp-date').value=todayStr();
     toast('支出を追加しました ✓');}
   catch(e){toast('追加に失敗しました');}
 });
 function renderCatList(elId,cats,type){document.getElementById(elId).innerHTML=cats.map((c,i)=>`<div class="cat-item"><span class="cat-name">${CI[c]||'📦'} ${c}</span><button class="cat-del" onclick="window.delCat('${type}',${i})">×</button></div>`).join('');}
+window.delCard=function(idx){
+  settings.cards.splice(idx,1);
+  renderCardList();renderCardSelect('inc-card');renderCardSelect('exp-card');
+};
+document.getElementById('card-add').addEventListener('click',()=>{
+  const v=document.getElementById('card-new').value.trim();
+  if(!v){toast('カード名を入力してください');return;}
+  if(!settings.cards)settings.cards=[];
+  settings.cards.push(v);document.getElementById('card-new').value='';
+  renderCardList();renderCardSelect('inc-card');renderCardSelect('exp-card');
+});
+
+// Fixed expense modal
+document.getElementById('fixed-add').addEventListener('click',()=>{
+  document.getElementById('fixed-name').value='';
+  document.getElementById('fixed-amt').value='';
+  document.getElementById('fixed-cat').innerHTML=settings.expCats.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('fixed-card').innerHTML=settings.cards.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('fixed-freq').value='monthly';
+  document.getElementById('fixed-month-row').style.display='none';
+  document.getElementById('fixed-modal-bg').classList.add('on');
+});
+document.getElementById('fixed-freq').addEventListener('change',()=>{
+  document.getElementById('fixed-month-row').style.display=document.getElementById('fixed-freq').value==='yearly'?'block':'none';
+});
+document.getElementById('fixed-modal-close').addEventListener('click',()=>document.getElementById('fixed-modal-bg').classList.remove('on'));
+document.getElementById('fixed-modal-cancel').addEventListener('click',()=>document.getElementById('fixed-modal-bg').classList.remove('on'));
+document.getElementById('fixed-modal-ok').addEventListener('click',()=>{
+  const name=document.getElementById('fixed-name').value.trim();
+  const amt=parseFloat(document.getElementById('fixed-amt').value);
+  if(!name){toast('名前を入力してください');return;}
+  if(!amt||amt<=0){toast('金額を入力してください');return;}
+  if(!settings.fixedExp)settings.fixedExp=[];
+  const freq=document.getElementById('fixed-freq').value;
+  const entry={name,amount:amt,cat:document.getElementById('fixed-cat').value,card:document.getElementById('fixed-card').value,freq};
+  if(freq==='yearly')entry.month=parseInt(document.getElementById('fixed-month').value);
+  settings.fixedExp.push(entry);
+  renderFixedList();
+  document.getElementById('fixed-modal-bg').classList.remove('on');
+  toast('固定費を追加しました');
+});
+window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();};
+
+// 固定費を月の記録に自動反映
+async function applyFixedExpenses(){
+  if(!settings.fixedExp||!settings.fixedExp.length)return;
+  const monthKey=cy+'-'+cm;
+  const appliedKey='fixedApplied_'+monthKey;
+  // 既にこの月に適用済みかチェック
+  try{
+    const metaDoc=await getDoc(doc(db,'users',uid,'meta',appliedKey));
+    if(metaDoc.exists())return; // 既に適用済み
+  }catch(e){}
+  
+  const toApply=settings.fixedExp.filter(f=>{
+    if(f.freq==='monthly')return true;
+    if(f.freq==='yearly')return f.month===(cm+1);
+    return false;
+  });
+  if(!toApply.length)return;
+  
+  for(const f of toApply){
+    const d=new Date(cy,cm,1);
+    await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:cy,month:cm,createdAt:d.getTime(),isFixed:true});
+  }
+  // 適用済みフラグを保存
+  await setDoc(doc(db,'users',uid,'meta',appliedKey),{applied:true,at:Date.now()});
+  toast('固定費を自動反映しました ✓');
+}
+
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};
 document.getElementById('inc-cat-add').addEventListener('click',()=>{const v=document.getElementById('inc-cat-new').value.trim();if(!v){toast('カテゴリ名を入力してください');return;}settings.incCats.push(v);document.getElementById('inc-cat-new').value='';renderCatList('inc-cat-list',settings.incCats,'inc');});
 document.getElementById('exp-cat-add').addEventListener('click',()=>{const v=document.getElementById('exp-cat-new').value.trim();if(!v){toast('カテゴリ名を入力してください');return;}settings.expCats.push(v);document.getElementById('exp-cat-new').value='';renderCatList('exp-cat-list',settings.expCats,'exp');});

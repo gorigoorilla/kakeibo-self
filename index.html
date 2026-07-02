@@ -180,11 +180,7 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           <div class="sum-card"><div class="sum-l">残高</div><div class="sum-v" id="h-bal">¥0</div></div>
         </div>
       </div>
-      <div id="card-budget-section" class="card-budget-wrap"></div>
-      <div style="padding:12px 16px 90px;">
-        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:8px;letter-spacing:.04em;">今月の記録</div>
-        <div id="recent-list"></div>
-      </div>
+      <div id="card-budget-section" class="card-budget-wrap" style="padding-bottom:90px;"></div>
     </div>
     <div class="pg" id="pg-input">
       <div class="form-wrap">
@@ -321,6 +317,8 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
     <div class="modal-title">記録を編集</div>
     <div class="modal-row"><div class="modal-label">金額（円）</div><input class="modal-input" type="number" id="modal-amt" inputmode="numeric"></div>
     <div class="modal-row"><div class="modal-label">カテゴリ</div><select class="modal-select" id="modal-cat"></select></div>
+    <div class="modal-row"><div class="modal-label">支払方法</div><select class="modal-select" id="modal-card"></select></div>
+    <div class="modal-row"><div class="modal-label">日付</div><input class="modal-input" type="date" id="modal-date"></div>
     <div class="modal-row"><div class="modal-label">メモ</div><input class="modal-input" id="modal-note" placeholder="メモ（任意）"></div>
     <div class="modal-btns"><button class="modal-btn cancel" id="modal-cancel">キャンセル</button><button class="modal-btn save" id="modal-save">保存</button></div>
   </div>
@@ -491,23 +489,43 @@ function renderChart(){
   const exp=records.filter(r=>r.type==='exp').reduce((s,r)=>s+r.amount,0);
   barInst=new Chart(document.getElementById('bar-chart'),{type:'bar',data:{labels:['収入','支出'],datasets:[{data:[inc,exp],backgroundColor:['#4ac090','#e07050'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>'¥'+v.toLocaleString(),font:{size:10}}}}}});
 }
-function renderAll(){setLabel();renderSum();renderCardBudgets();renderRecent();if(curTab==='hist')renderHist();if(curTab==='chart')renderChart();if(curTab==='cal')renderCalendar();}
+function renderAll(){setLabel();renderSum();renderCardBudgets();if(curTab==='hist')renderHist();if(curTab==='chart')renderChart();if(curTab==='cal')renderCalendar();}
 window.delR=async function(id){try{await deleteDoc(doc(db,'users',uid,'records',id));toast('削除しました');}catch(e){toast('削除に失敗しました');}};
 window.editR=function(id){
   const r=records.find(x=>x.id===id);if(!r)return;editingId=id;
   const allCats=r.type==='inc'?settings.incCats:settings.expCats;
   document.getElementById('modal-cat').innerHTML=allCats.map(c=>`<option${c===r.cat?' selected':''}>${c}</option>`).join('');
-  document.getElementById('modal-amt').value=r.amount;document.getElementById('modal-note').value=r.note||'';
+  document.getElementById('modal-card').innerHTML=(settings.cards||[]).map(c=>`<option${c===r.card?' selected':''}>${c}</option>`).join('');
+  document.getElementById('modal-amt').value=r.amount;
+  document.getElementById('modal-note').value=r.note||'';
+  // 日付をセット
+  const d=new Date(r.createdAt);
+  const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  document.getElementById('modal-date').value=ds;
   document.getElementById('edit-modal').classList.add('on');
 };
 document.getElementById('modal-close').addEventListener('click',()=>document.getElementById('edit-modal').classList.remove('on'));
 document.getElementById('modal-cancel').addEventListener('click',()=>document.getElementById('edit-modal').classList.remove('on'));
 document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))document.getElementById('edit-modal').classList.remove('on');});
 document.getElementById('modal-save').addEventListener('click',async()=>{
-  if(!editingId)return;const a=parseFloat(document.getElementById('modal-amt').value);
+  if(!editingId)return;
+  const a=parseFloat(document.getElementById('modal-amt').value);
   if(!a||a<=0){toast('金額を入力してください');return;}
-  try{await updateDoc(doc(db,'users',uid,'records',editingId),{amount:a,cat:document.getElementById('modal-cat').value,note:document.getElementById('modal-note').value.trim()});document.getElementById('edit-modal').classList.remove('on');toast('更新しました ✓');}
-  catch(e){toast('更新に失敗しました');}
+  const dateStr=document.getElementById('modal-date').value||todayStr();
+  const newDate=new Date(dateStr);
+  try{
+    await updateDoc(doc(db,'users',uid,'records',editingId),{
+      amount:a,
+      cat:document.getElementById('modal-cat').value,
+      card:document.getElementById('modal-card').value,
+      note:document.getElementById('modal-note').value.trim(),
+      year:newDate.getFullYear(),
+      month:newDate.getMonth(),
+      createdAt:newDate.getTime()+43200000
+    });
+    document.getElementById('edit-modal').classList.remove('on');
+    toast('更新しました ✓');
+  }catch(e){toast('更新に失敗しました');}
 });
 document.getElementById('btn-inc').addEventListener('click',async()=>{
   const a=parseFloat(document.getElementById('inc-amt').value);if(!a||a<=0){toast('金額を入力してください');return;}

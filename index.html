@@ -446,7 +446,7 @@ function renderCalendar(){
     <div class="cal-sum-row"><span class="cal-sum-label">💰 今月の収入</span><span class="cal-sum-val" style="color:var(--inc)">${fmt(totalInc)}</span></div>
     <div class="cal-sum-row"><span class="cal-sum-label">💸 今月の支出</span><span class="cal-sum-val" style="color:var(--exp)">${fmt(totalExp)}</span></div>
     <div class="cal-sum-row"><span class="cal-sum-label">📅 支出のあった日</span><span class="cal-sum-val">${daysWithExp}日</span></div>
-    <div class="cal-sum-row"><span class="cal-sum-label">💹 残高</span><span class="cal-sum-val" style="color:${totalInc-totalExp>=0?'var(--inc)':'var(--exp)'">${fmt(totalInc-totalExp)}</span></div>
+    <div class="cal-sum-row"><span class="cal-sum-label">💹 残高</span><span class="cal-sum-val" style="color:${totalInc-totalExp>=0?'var(--inc)':'var(--exp)'}">${fmt(totalInc-totalExp)}</span></div>
   `;
   const ml3=document.getElementById('ml3');if(ml3)ml3.textContent=cy+'年'+(cm+1)+'月';
 }

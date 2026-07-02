@@ -442,7 +442,7 @@ function renderCardBudgets(){
         <div class="cb-name">💳 ${c}</div>
         <div class="cb-amounts">使用 ¥${use.toLocaleString()} / ¥${budget.toLocaleString()}</div>
       </div>
-      <div class="cb-bar" style="background:#e0e0e0;position:relative;"><div class="cb-fill" style="width:${remainPct}%;background:${color};position:absolute;right:0;top:0;height:100%;border-radius:99px;"></div></div>
+      <div class="cb-bar" style="background:#e0e0e0;"><div class="cb-fill" style="width:${remainPct}%;background:${color};"></div></div>
       <div class="cb-remain" style="color:${remain>=0?'var(--inc)':'var(--exp)'}">残り ¥${remain.toLocaleString()} ›</div>
     </div>`;
   });

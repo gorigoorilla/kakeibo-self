@@ -434,14 +434,15 @@ function renderCardBudgets(){
     if(!budget)return;
     const use=spent[c]||0;
     const remain=budget-use;
-    const pct=Math.min(100,Math.round(use/budget*100));
-    const color=pct>=100?'#c94a1a':pct>=80?'#e07050':'#4ac090';
+    const usePct=Math.min(100,Math.round(use/budget*100));
+    const remainPct=Math.max(0,100-usePct);
+    const color=usePct>=100?'#c94a1a':usePct>=80?'#e07050':'#4ac090';
     html+=`<div class="cb-item" onclick="window.showCardDetail('${c}')" style="cursor:pointer;">
       <div class="cb-top">
         <div class="cb-name">💳 ${c}</div>
-        <div class="cb-amounts">¥${use.toLocaleString()} / ¥${budget.toLocaleString()}</div>
+        <div class="cb-amounts">使用 ¥${use.toLocaleString()} / ¥${budget.toLocaleString()}</div>
       </div>
-      <div class="cb-bar"><div class="cb-fill" style="width:${pct}%;background:${color};"></div></div>
+      <div class="cb-bar" style="background:#e0e0e0;position:relative;"><div class="cb-fill" style="width:${remainPct}%;background:${color};position:absolute;right:0;top:0;height:100%;border-radius:99px;"></div></div>
       <div class="cb-remain" style="color:${remain>=0?'var(--inc)':'var(--exp)'}">残り ¥${remain.toLocaleString()} ›</div>
     </div>`;
   });

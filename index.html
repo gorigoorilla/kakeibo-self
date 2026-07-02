@@ -183,7 +183,10 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
             <div class="ff"><label>金額（円）</label><input type="number" id="inc-amt" placeholder="0" inputmode="numeric"></div>
             <div class="ff"><label>カテゴリ</label><select id="inc-cat"></select></div>
           </div>
-          <input class="fnote" id="inc-note" placeholder="メモ（任意）">
+          <div class="fgrid">
+            <div class="ff"><label>日付</label><input type="date" id="inc-date"></div>
+            <div class="ff"><label>メモ</label><input type="text" id="inc-note" placeholder="任意"></div>
+          </div>
           <button class="fbtn" style="background:var(--inc);" id="btn-inc">＋ 収入を追加</button>
         </div>
         <div class="fsec">
@@ -192,7 +195,10 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
             <div class="ff"><label>金額（円）</label><input type="number" id="exp-amt" placeholder="0" inputmode="numeric"></div>
             <div class="ff"><label>カテゴリ</label><select id="exp-cat"></select></div>
           </div>
-          <input class="fnote" id="exp-note" placeholder="メモ（任意）">
+          <div class="fgrid">
+            <div class="ff"><label>日付</label><input type="date" id="exp-date"></div>
+            <div class="ff"><label>メモ</label><input type="text" id="exp-note" placeholder="任意"></div>
+          </div>
           <button class="fbtn" style="background:var(--exp);" id="btn-exp">－ 支出を追加</button>
         </div>
       </div>
@@ -296,7 +302,7 @@ onAuthStateChanged(auth,async user=>{
     uid=user.uid;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
-    await loadSettings();applySettings();subscribe();
+    await loadSettings();applySettings();subscribe();initDateInputs();
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -314,6 +320,8 @@ function applySettings(){
   renderCatList('inc-cat-list',settings.incCats,'inc');
   renderCatList('exp-cat-list',settings.expCats,'exp');
 }
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function initDateInputs(){const t=todayStr();const id=document.getElementById('inc-date');const ed=document.getElementById('exp-date');if(id)id.value=t;if(ed)ed.value=t;}
 function subscribe(){
   if(!uid)return;if(unsubscribe)unsubscribe();
   const q=query(recCol(),where('year','==',cy),where('month','==',cm));
@@ -374,12 +382,22 @@ document.getElementById('modal-save').addEventListener('click',async()=>{
 });
 document.getElementById('btn-inc').addEventListener('click',async()=>{
   const a=parseFloat(document.getElementById('inc-amt').value);if(!a||a<=0){toast('金額を入力してください');return;}
-  try{await addDoc(recCol(),{type:'inc',amount:a,cat:document.getElementById('inc-cat').value,note:document.getElementById('inc-note').value.trim(),year:cy,month:cm,createdAt:Date.now()});document.getElementById('inc-amt').value='';document.getElementById('inc-note').value='';toast('収入を追加しました ✓');}
+  try{const incDateStr=document.getElementById('inc-date').value||todayStr();
+    const incDate=new Date(incDateStr);
+    await addDoc(recCol(),{type:'inc',amount:a,cat:document.getElementById('inc-cat').value,note:document.getElementById('inc-note').value.trim(),year:incDate.getFullYear(),month:incDate.getMonth(),createdAt:incDate.getTime()+43200000});
+    document.getElementById('inc-amt').value='';document.getElementById('inc-note').value='';
+    document.getElementById('inc-date').value=todayStr();
+    toast('収入を追加しました ✓');}
   catch(e){toast('追加に失敗しました');}
 });
 document.getElementById('btn-exp').addEventListener('click',async()=>{
   const a=parseFloat(document.getElementById('exp-amt').value);if(!a||a<=0){toast('金額を入力してください');return;}
-  try{await addDoc(recCol(),{type:'exp',amount:a,cat:document.getElementById('exp-cat').value,note:document.getElementById('exp-note').value.trim(),year:cy,month:cm,createdAt:Date.now()});document.getElementById('exp-amt').value='';document.getElementById('exp-note').value='';toast('支出を追加しました ✓');}
+  try{const expDateStr=document.getElementById('exp-date').value||todayStr();
+    const expDate=new Date(expDateStr);
+    await addDoc(recCol(),{type:'exp',amount:a,cat:document.getElementById('exp-cat').value,note:document.getElementById('exp-note').value.trim(),year:expDate.getFullYear(),month:expDate.getMonth(),createdAt:expDate.getTime()+43200000});
+    document.getElementById('exp-amt').value='';document.getElementById('exp-note').value='';
+    document.getElementById('exp-date').value=todayStr();
+    toast('支出を追加しました ✓');}
   catch(e){toast('追加に失敗しました');}
 });
 function renderCatList(elId,cats,type){document.getElementById(elId).innerHTML=cats.map((c,i)=>`<div class="cat-item"><span class="cat-name">${CI[c]||'📦'} ${c}</span><button class="cat-del" onclick="window.delCat('${type}',${i})">×</button></div>`).join('');}

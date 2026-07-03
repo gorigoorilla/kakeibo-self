@@ -497,7 +497,7 @@ function subscribe(){
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
-function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();const _y=cy,_m=cm;setTimeout(()=>applyFixedExpenses(_y,_m),1500);}
+function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();}
 document.getElementById('pm').addEventListener('click',()=>changeMonth(-1));
 document.getElementById('nm').addEventListener('click',()=>changeMonth(1));
 document.getElementById('pm2').addEventListener('click',()=>changeMonth(-1));

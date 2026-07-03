@@ -497,7 +497,7 @@ function subscribe(){
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
-function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();setTimeout(()=>applyFixedExpenses(cy,cm),2000);}
+function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();}
 document.getElementById('pm').addEventListener('click',()=>changeMonth(-1));
 document.getElementById('nm').addEventListener('click',()=>changeMonth(1));
 document.getElementById('pm2').addEventListener('click',()=>changeMonth(-1));
@@ -635,20 +635,11 @@ document.getElementById('fixed-modal-ok').addEventListener('click',async()=>{
 });
 window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();};
 
-// 固定費処理中フラグ
+// 適用済み月を記録するSet（メモリ上）
+const appliedMonths=new Set();
 let applyingFixed=false;
 
-// 指定月の全recordsを取得して固定費の重複チェック
-async function getFixedNamesForMonth(y,m){
-  try{
-    const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m)));
-    return snap.docs
-      .filter(d=>d.data().isFixed===true)
-      .map(d=>(d.data().note||'').replace('（固定費）','').trim());
-  }catch(e){return[];}
-}
-
-// 開始月から現在月まで一括反映
+// 開始月から現在月まで一括反映（固定費登録時）
 async function applyFixedExpenseRange(f){
   const now=new Date();
   const endYear=now.getFullYear();
@@ -658,37 +649,43 @@ async function applyFixedExpenseRange(f){
   let added=0;
   while(y<endYear||(y===endYear&&m<=endMonth)){
     if(f.freq==='yearly'&&f.month!==(m+1)){m++;if(m>11){m=0;y++;}continue;}
-    const existingNames=await getFixedNamesForMonth(y,m);
-    if(!existingNames.includes(f.name)){
-      await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:new Date(y,m,1).getTime(),isFixed:true});
-      added++;
-    }
+    // その月の全レコードのノートを確認
+    try{
+      const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m)));
+      const notes=snap.docs.map(d=>(d.data().note||''));
+      if(!notes.some(n=>n.includes(f.name+'（固定費）'))){
+        await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:new Date(y,m,1).getTime(),isFixed:true});
+        added++;
+      }
+    }catch(e){}
     m++;if(m>11){m=0;y++;}
   }
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
-  else toast('すでに全期間反映済みやで');
 }
 
-// 固定費をボタンで指定月に反映
+// 月切り替え・ログイン時の自動反映
 async function applyFixedExpenses(targetYear,targetMonth){
-  if(applyingFixed)return; // 二重実行防止
+  if(applyingFixed)return;
   if(!settings.fixedExp||!settings.fixedExp.length)return;
+  const ty=targetYear!==undefined?targetYear:cy;
+  const tm=targetMonth!==undefined?targetMonth:cm;
+  const key=ty+'-'+tm;
+  if(appliedMonths.has(key))return; // このセッションで既に処理済み
   applyingFixed=true;
+  appliedMonths.add(key); // 先にフラグを立てる
   try{
-    const ty=targetYear!==undefined?targetYear:cy;
-    const tm=targetMonth!==undefined?targetMonth:cm;
     const toApply=settings.fixedExp.filter(f=>{
       if(f.freq==='monthly')return true;
       if(f.freq==='yearly')return f.month===(tm+1);
       return false;
     });
-    if(!toApply.length){applyingFixed=false;return;}
-    const existingNames=await getFixedNamesForMonth(ty,tm);
+    if(!toApply.length)return;
+    const snap=await getDocs(query(recCol(),where('year','==',ty),where('month','==',tm)));
+    const notes=snap.docs.map(d=>(d.data().note||''));
     let added=0;
     for(const f of toApply){
-      if(existingNames.some(n=>n===f.name))continue;
+      if(notes.some(n=>n.includes(f.name+'（固定費）')))continue;
       await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:new Date(ty,tm,1).getTime(),isFixed:true});
-      existingNames.push(f.name); // 追加したらローカルにも追記
       added++;
     }
     if(added>0)toast(`固定費 ${added}件を自動反映しました ✓`);

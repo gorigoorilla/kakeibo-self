@@ -357,16 +357,17 @@ document.getElementById('login-btn').addEventListener('click',async()=>{
 document.getElementById('user-btn').addEventListener('click',async()=>{if(confirm('ログアウトしますか？'))await signOut(auth);});
 
 getRedirectResult(auth).catch(()=>{});
+let loginProcessed=false;
 onAuthStateChanged(auth,async user=>{
   if(user){
+    if(loginProcessed)return; // 2回目以降は無視
+    loginProcessed=true;
     uid=user.uid;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
-    await loadSettings();applySettings();subscribe();initDateInputs();const now=new Date();
-    // ログイン時に今月分を自動反映
-    setTimeout(async()=>{
-      applyFixedExpenses(now.getFullYear(),now.getMonth());
-    },2000);
+    await loadSettings();applySettings();subscribe();initDateInputs();
+    const now=new Date();
+    setTimeout(()=>applyFixedExpenses(now.getFullYear(),now.getMonth()),2000);
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {

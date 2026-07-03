@@ -636,6 +636,16 @@ document.getElementById('fixed-modal-ok').addEventListener('click',async()=>{
 });
 window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();};
 
+// 指定月の全recordsを取得して固定費の重複チェック
+async function getFixedNamesForMonth(y,m){
+  try{
+    const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m)));
+    return snap.docs
+      .filter(d=>d.data().isFixed===true)
+      .map(d=>d.data().note?.replace('（固定費）','').trim());
+  }catch(e){return[];}
+}
+
 // 開始月から現在月まで一括反映
 async function applyFixedExpenseRange(f){
   const now=new Date();
@@ -646,47 +656,37 @@ async function applyFixedExpenseRange(f){
   let added=0;
   while(y<endYear||(y===endYear&&m<=endMonth)){
     if(f.freq==='yearly'&&f.month!==(m+1)){m++;if(m>11){m=0;y++;}continue;}
-    try{
-      const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m),where('isFixed','==',true)));
-      const existingNames=snap.docs.map(d=>d.data().note?.replace('（固定費）','').trim());
-      if(!existingNames.includes(f.name)){
-        const d=new Date(y,m,1);
-        await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:d.getTime(),isFixed:true});
-        added++;
-      }
-    }catch(e){}
+    const existingNames=await getFixedNamesForMonth(y,m);
+    if(!existingNames.includes(f.name)){
+      await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:new Date(y,m,1).getTime(),isFixed:true});
+      added++;
+    }
     m++;if(m>11){m=0;y++;}
   }
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
   else toast('すでに全期間反映済みやで');
 }
 
-// 固定費を月の記録に自動反映
+// 固定費をボタンで指定月に反映
 async function applyFixedExpenses(targetYear,targetMonth){
-  if(!settings.fixedExp||!settings.fixedExp.length){toast('固定費が登録されてないわ');return;}
-  const ty=targetYear||cy;
+  if(!settings.fixedExp||!settings.fixedExp.length){toast('固定費が登録されてへんわ');return;}
+  const ty=targetYear!==undefined?targetYear:cy;
   const tm=targetMonth!==undefined?targetMonth:cm;
-
   const toApply=settings.fixedExp.filter(f=>{
     if(f.freq==='monthly')return true;
     if(f.freq==='yearly')return f.month===(tm+1);
     return false;
   });
   if(!toApply.length){toast('この月に該当する固定費なし');return;}
-
-  try{
-    const snap=await getDocs(query(recCol(),where('year','==',ty),where('month','==',tm),where('isFixed','==',true)));
-    const existingNames=snap.docs.map(d=>d.data().note?.replace('（固定費）','').trim());
-    let added=0;
-    for(const f of toApply){
-      if(existingNames.includes(f.name))continue;
-      const d=new Date(ty,tm,1);
-      await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:d.getTime(),isFixed:true});
-      added++;
-    }
-    if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
-    else toast('すでに全件反映済みやで');
-  }catch(e){console.log('fixed exp error:',e);}
+  const existingNames=await getFixedNamesForMonth(ty,tm);
+  let added=0;
+  for(const f of toApply){
+    if(existingNames.includes(f.name))continue;
+    await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:new Date(ty,tm,1).getTime(),isFixed:true});
+    added++;
+  }
+  if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
+  else toast('すでに全件反映済みやで');
 }
 
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};

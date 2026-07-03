@@ -171,8 +171,7 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="hd-sync" id="sync-label">同期中...</div>
-            <button id="fixed-apply-btn" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:11px;font-family:inherit;border-radius:99px;padding:5px 10px;cursor:pointer;">固定費反映</button>
-            <button id="user-btn">ログアウト</button>
+<button id="user-btn">ログアウト</button>
           </div>
         </div>
         <div class="sum-grid">
@@ -356,18 +355,18 @@ document.getElementById('login-btn').addEventListener('click',async()=>{
   catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'){try{await signInWithRedirect(auth,provider);}catch(e2){}}}
 });
 document.getElementById('user-btn').addEventListener('click',async()=>{if(confirm('ログアウトしますか？'))await signOut(auth);});
-document.getElementById('fixed-apply-btn').addEventListener('click',async()=>{
-  if(confirm(cy+'年'+(cm+1)+'月の固定費を反映する？')){
-    await applyFixedExpenses(cy,cm);
-  }
-});
+
 getRedirectResult(auth).catch(()=>{});
 onAuthStateChanged(auth,async user=>{
   if(user){
     uid=user.uid;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
-    await loadSettings();applySettings();subscribe();initDateInputs();const now=new Date();setTimeout(()=>applyFixedExpenses(now.getFullYear(),now.getMonth()),2000);
+    await loadSettings();applySettings();subscribe();initDateInputs();const now=new Date();
+    // ログイン時に今月分を自動反映
+    setTimeout(async()=>{
+      await applyFixedExpenses(now.getFullYear(),now.getMonth());
+    },2000);
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -498,7 +497,7 @@ function subscribe(){
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
-function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();}
+function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();setTimeout(()=>applyFixedExpenses(cy,cm),1500);}
 document.getElementById('pm').addEventListener('click',()=>changeMonth(-1));
 document.getElementById('nm').addEventListener('click',()=>changeMonth(1));
 document.getElementById('pm2').addEventListener('click',()=>changeMonth(-1));
@@ -685,8 +684,7 @@ async function applyFixedExpenses(targetYear,targetMonth){
     await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:new Date(ty,tm,1).getTime(),isFixed:true});
     added++;
   }
-  if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
-  else toast('すでに全件反映済みやで');
+  if(added>0)toast(`固定費 ${added}件を自動反映しました ✓`);
 }
 
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};

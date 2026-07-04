@@ -365,14 +365,12 @@ onAuthStateChanged(auth,async user=>{
     uid=user.uid;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
-    await loadSettings();applySettings();subscribe();initDateInputs();
-    const now=new Date();
-    // settingsが読み込まれてから固定費反映
-    setTimeout(()=>{
-      const cnt=settings.fixedExp?settings.fixedExp.length:0;
-      toast(`固定費${cnt}件チェック中...`);
-      if(cnt>0)applyFixedExpenses(now.getFullYear(),now.getMonth());
-    },3000);
+    await loadSettings();
+    applySettings();
+    subscribe();
+    initDateInputs();
+    const _now=new Date();
+    applyFixedExpenses(_now.getFullYear(),_now.getMonth());
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -503,7 +501,7 @@ function subscribe(){
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
-function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();}
+function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}const _y=cy,_m=cm;subscribe();applyFixedExpenses(_y,_m);}
 document.getElementById('pm').addEventListener('click',()=>changeMonth(-1));
 document.getElementById('nm').addEventListener('click',()=>changeMonth(1));
 document.getElementById('pm2').addEventListener('click',()=>changeMonth(-1));
@@ -641,25 +639,23 @@ document.getElementById('fixed-modal-ok').addEventListener('click',async()=>{
 });
 window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();};
 
-// 適用済み月を記録するSet（メモリ上）
-const appliedMonths=new Set();
-let applyingFixed=false;
+// 固定費の重複防止（セッション内で処理済みの月を記録）
+const fixedDoneMonths=new Set();
+let fixedRunning=false;
 
 // 開始月から現在月まで一括反映（固定費登録時）
 async function applyFixedExpenseRange(f){
   const now=new Date();
-  const endYear=now.getFullYear();
-  const endMonth=now.getMonth();
-  let y=f.startYear||endYear;
-  let m=f.startMonth!==undefined?f.startMonth:endMonth;
+  let y=f.startYear||now.getFullYear();
+  let m=f.startMonth!==undefined?f.startMonth:now.getMonth();
+  const endY=now.getFullYear(),endM=now.getMonth();
   let added=0;
-  while(y<endYear||(y===endYear&&m<=endMonth)){
+  while(y<endY||(y===endY&&m<=endM)){
     if(f.freq==='yearly'&&f.month!==(m+1)){m++;if(m>11){m=0;y++;}continue;}
-    // その月の全レコードのノートを確認
     try{
       const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m)));
-      const notes=snap.docs.map(d=>(d.data().note||''));
-      if(!notes.some(n=>n.includes(f.name+'（固定費）'))){
+      const notes=snap.docs.map(d=>d.data().note||'');
+      if(!notes.some(n=>n===f.name+'（固定費）')){
         await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:new Date(y,m,1).getTime(),isFixed:true});
         added++;
       }
@@ -669,35 +665,31 @@ async function applyFixedExpenseRange(f){
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
 }
 
-// 月切り替え・ログイン時の自動反映
-async function applyFixedExpenses(targetYear,targetMonth){
-  if(applyingFixed)return;
+// 指定月に固定費を反映（重複なし）
+async function applyFixedExpenses(ty,tm){
+  if(fixedRunning)return;
   if(!settings.fixedExp||!settings.fixedExp.length)return;
-  const ty=targetYear!==undefined?targetYear:cy;
-  const tm=targetMonth!==undefined?targetMonth:cm;
-  const key=ty+'-'+tm;
-  if(appliedMonths.has(key))return; // このセッションで既に処理済み
-  applyingFixed=true;
-  appliedMonths.add(key); // 先にフラグを立てる
+  const key=`${ty}-${tm}`;
+  if(fixedDoneMonths.has(key))return;
+  fixedRunning=true;
+  fixedDoneMonths.add(key);
   try{
-    const toApply=settings.fixedExp.filter(f=>{
-      if(f.freq==='monthly')return true;
-      if(f.freq==='yearly')return f.month===(tm+1);
-      return false;
-    });
-    if(!toApply.length)return;
+    const toApply=settings.fixedExp.filter(f=>
+      f.freq==='monthly'||(f.freq==='yearly'&&f.month===(tm+1))
+    );
+    if(!toApply.length){fixedRunning=false;return;}
     const snap=await getDocs(query(recCol(),where('year','==',ty),where('month','==',tm)));
-    const notes=snap.docs.map(d=>(d.data().note||''));
+    const notes=snap.docs.map(d=>d.data().note||'');
     let added=0;
     for(const f of toApply){
-      if(notes.some(n=>n.includes(f.name+'（固定費）')))continue;
+      if(notes.some(n=>n===f.name+'（固定費）'))continue;
       await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:new Date(ty,tm,1).getTime(),isFixed:true});
+      notes.push(f.name+'（固定費）');
       added++;
     }
-    if(added>0)toast(`固定費 ${added}件を自動反映しました ✓`);
-  }finally{
-    applyingFixed=false;
-  }
+    if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
+  }catch(e){fixedDoneMonths.delete(key);}
+  finally{fixedRunning=false;}
 }
 
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};

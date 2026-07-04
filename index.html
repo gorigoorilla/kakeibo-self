@@ -367,7 +367,12 @@ onAuthStateChanged(auth,async user=>{
     document.getElementById('user-btn').textContent=user.displayName?.split(' ')[0]||'ログアウト';
     await loadSettings();applySettings();subscribe();initDateInputs();
     const now=new Date();
-    setTimeout(()=>applyFixedExpenses(now.getFullYear(),now.getMonth()),2000);
+    // settingsが読み込まれてから固定費反映
+    setTimeout(()=>{
+      const cnt=settings.fixedExp?settings.fixedExp.length:0;
+      toast(`固定費${cnt}件チェック中...`);
+      if(cnt>0)applyFixedExpenses(now.getFullYear(),now.getMonth());
+    },3000);
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {

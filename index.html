@@ -655,23 +655,27 @@ async function applyFixedExpenseRange(f){
   let y=f.startYear||now.getFullYear();
   let m=f.startMonth!==undefined?f.startMonth:now.getMonth();
   const endY=now.getFullYear(),endM=now.getMonth();
+  // 全レコードを1回だけ取得
+  let allSnap;
+  try{allSnap=await getDocs(recCol());}catch(e){return;}
+  const allNotes=allSnap.docs.map(d=>({y:d.data().year,m:d.data().month,note:d.data().note||''}));
   let added=0;
   while(y<endY||(y===endY&&m<=endM)){
     if(f.freq==='yearly'&&f.month!==(m+1)){m++;if(m>11){m=0;y++;}continue;}
-    try{
-      const snap=await getDocs(query(recCol(),where('year','==',y),where('month','==',m)));
-      const notes=snap.docs.map(d=>d.data().note||'');
-      if(!notes.some(n=>n===f.name+'（固定費）')){
+    const alreadyIn=allNotes.some(n=>n.y===y&&n.m===m&&n.note===f.name+'（固定費）');
+    if(!alreadyIn){
+      try{
         await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:y,month:m,createdAt:new Date(y,m,1).getTime(),isFixed:true});
+        allNotes.push({y,m,note:f.name+'（固定費）'});
         added++;
-      }
-    }catch(e){}
+      }catch(e){}
+    }
     m++;if(m>11){m=0;y++;}
   }
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
 }
 
-// 指定月に固定費を反映（重複なし）
+// 指定月に固定費を反映（メモリ上のrecordsで重複チェック）
 async function applyFixedExpenses(ty,tm){
   if(fixedRunning)return;
   if(!settings.fixedExp||!settings.fixedExp.length)return;
@@ -683,18 +687,20 @@ async function applyFixedExpenses(ty,tm){
     const toApply=settings.fixedExp.filter(f=>
       f.freq==='monthly'||(f.freq==='yearly'&&f.month===(tm+1))
     );
-    if(!toApply.length){fixedRunning=false;return;}
-    const snap=await getDocs(query(recCol(),where('year','==',ty),where('month','==',tm)));
-    const notes=snap.docs.map(d=>d.data().note||'');
+    if(!toApply.length)return;
+    // すでにrecordsに入ってるノートを確認
+    const existingNotes=records
+      .filter(r=>r.year===ty&&r.month===tm)
+      .map(r=>r.note||'');
     let added=0;
     for(const f of toApply){
-      if(notes.some(n=>n===f.name+'（固定費）'))continue;
+      if(existingNotes.includes(f.name+'（固定費）'))continue;
       await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:ty,month:tm,createdAt:new Date(ty,tm,1).getTime(),isFixed:true});
-      notes.push(f.name+'（固定費）');
+      existingNotes.push(f.name+'（固定費）');
       added++;
     }
     if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
-  }catch(e){fixedDoneMonths.delete(key);}
+  }catch(e){console.error('fixed:',e);fixedDoneMonths.delete(key);}
   finally{fixedRunning=false;}
 }
 

@@ -628,14 +628,20 @@ document.getElementById('fixed-modal-ok').addEventListener('click',async()=>{
   const freq=document.getElementById('fixed-freq').value;
   const entry={name,amount:amt,cat:document.getElementById('fixed-cat').value,card:document.getElementById('fixed-card').value,freq};
   if(freq==='yearly')entry.month=parseInt(document.getElementById('fixed-month').value);
-  entry.startYear=parseInt(document.getElementById('fixed-start-year').value);
-  entry.startMonth=parseInt(document.getElementById('fixed-start-month').value);
+  const _n=new Date();
+  entry.startYear=_n.getFullYear();
+  entry.startMonth=_n.getMonth();
   settings.fixedExp.push(entry);
   renderFixedList();
   document.getElementById('fixed-modal-bg').classList.remove('on');
-  await setDoc(settingsDoc(),settings);
-  toast('固定費を追加・保存しました ✓');
-  await applyFixedExpenseRange(entry);
+  try{
+    await setDoc(settingsDoc(),settings);
+    toast('固定費を追加・保存しました ✓');
+    applyFixedExpenseRange(entry);
+  }catch(e){
+    toast('保存失敗: '+e.message);
+    console.error(e);
+  }
 });
 window.delFixed=function(idx){settings.fixedExp.splice(idx,1);renderFixedList();};
 

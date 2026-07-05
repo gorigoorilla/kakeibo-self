@@ -675,12 +675,15 @@ async function applyFixedExpenseRange(f){
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
 }
 
-// 指定月に固定費を反映（メモリ上のrecordsで重複チェック）
+// 指定月に固定費を反映（settingsに反映済み月を記録）
 async function applyFixedExpenses(ty,tm){
   if(fixedRunning)return;
   if(!settings.fixedExp||!settings.fixedExp.length)return;
   const key=`${ty}-${tm}`;
   if(fixedDoneMonths.has(key))return;
+  // settingsに保存された反映済み月をチェック
+  if(!settings.appliedMonths)settings.appliedMonths=[];
+  if(settings.appliedMonths.includes(key))return;
   fixedRunning=true;
   fixedDoneMonths.add(key);
   try{
@@ -688,7 +691,10 @@ async function applyFixedExpenses(ty,tm){
       f.freq==='monthly'||(f.freq==='yearly'&&f.month===(tm+1))
     );
     if(!toApply.length)return;
-    // すでにrecordsに入ってるノートを確認
+    // 先にsettingsにフラグ保存
+    settings.appliedMonths.push(key);
+    await setDoc(settingsDoc(),settings);
+    // recordsで重複チェックして追加
     const existingNotes=records
       .filter(r=>r.year===ty&&r.month===tm)
       .map(r=>r.note||'');
@@ -700,8 +706,13 @@ async function applyFixedExpenses(ty,tm){
       added++;
     }
     if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
-  }catch(e){console.error('fixed:',e);fixedDoneMonths.delete(key);}
-  finally{fixedRunning=false;}
+  }catch(e){
+    settings.appliedMonths=settings.appliedMonths.filter(k=>k!==key);
+    fixedDoneMonths.delete(key);
+    console.error('fixed:',e);
+  }finally{
+    fixedRunning=false;
+  }
 }
 
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};

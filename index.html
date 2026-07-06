@@ -271,6 +271,13 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           <div id="fixed-list"></div>
           <button class="cat-add-btn" id="fixed-add" style="width:100%;height:44px;margin-top:12px;">＋ 固定費を追加</button>
         </div>
+        <div class="set-sec">
+          <div class="set-head">月の収入目標</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input class="cat-add-input" type="number" id="income-target-input" placeholder="例：300000" inputmode="numeric" style="flex:1;">
+            <span style="font-size:14px;color:var(--t3);">円</span>
+          </div>
+        </div>
         <button class="set-save-btn" id="save-settings">設定を保存</button>
       </div>
     </div>
@@ -351,7 +358,7 @@ const auth=getAuth(fbapp);
 const provider=new GoogleAuthProvider();
 let uid=null,cy=new Date().getFullYear(),cm=new Date().getMonth();
 let curTab='home',records=[],pieInst=null,barInst=null,unsubscribe=null,editingId=null;
-let settings={incCats:['給与','ボーナス','副収入','その他'],expCats:['食費','家賃','光熱費','交通費','日用品','外食','医療費','娯楽','被服費','サブスク','その他'],cards:['現金','楽天カード','PayPay'],fixedExp:[],cardBudgets:{}};
+let settings={incCats:['給与','ボーナス','副収入','その他'],expCats:['食費','家賃','光熱費','交通費','日用品','外食','医療費','娯楽','被服費','サブスク','その他'],cards:['現金','楽天カード','PayPay'],fixedExp:[],cardBudgets:{},incomeTarget:0};
 const CI={食費:'🍚',家賃:'🏠',光熱費:'💡',交通費:'🚃',日用品:'🧴',外食:'🍜',医療費:'💊',娯楽:'🎮',被服費:'👕',その他:'📦',給与:'💰',ボーナス:'🎁',副収入:'📈'};
 const CC={食費:'#c94a1a',家賃:'#2d4a8a',光熱費:'#b87a00',交通費:'#5a3a8a',日用品:'#3a6a3a',外食:'#8a3a1a',医療費:'#aa3355',娯楽:'#1a8a5a',被服費:'#2a7a3a',その他:'#888'};
 const COLORS=['#c94a1a','#2d4a8a','#b87a00','#5a3a8a','#3a6a3a','#8a3a1a','#aa3355','#1a8a5a','#2a7a3a','#888','#4a7aaa','#aa6a2a'];
@@ -504,6 +511,7 @@ let firstLoad=true;
 function subscribe(){
   if(!uid)return;if(unsubscribe)unsubscribe();
   firstLoad=true;
+  fixedDoneMonths.delete(`${cy}-${cm}`);
   const q=query(recCol(),where('year','==',cy),where('month','==',cm));
   unsubscribe=onSnapshot(q,snap=>{
     records=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.createdAt-a.createdAt);
@@ -526,9 +534,8 @@ function renderSum(){
   const inc=records.filter(r=>r.type==='inc').reduce((s,r)=>s+r.amount,0);
   const exp=records.filter(r=>r.type==='exp').reduce((s,r)=>s+r.amount,0);
   const bal=inc-exp;
-  // カード予算合計を目標収入として計算
-  const target=Object.values(settings.cardBudgets||{}).reduce((s,v)=>s+(v||0),0);
-  document.getElementById('h-inc').textContent=fmt(inc)+(target>0?` / ${fmt(target)}`:'');
+  const target=settings.incomeTarget||0;
+  document.getElementById('h-inc').textContent=target>0?`${fmt(inc)} / ${fmt(target)}`:fmt(inc);
   document.getElementById('h-exp').textContent=fmt(exp);
   const be=document.getElementById('h-bal');be.textContent=fmt(bal);be.style.color=bal>=0?'#a8f0d0':'#ffb5a0';
   // 目標達成率バー
@@ -743,7 +750,10 @@ async function applyFixedExpenses(ty,tm){
 window.delCat=function(type,idx){if(type==='inc')settings.incCats.splice(idx,1);else settings.expCats.splice(idx,1);renderCatList(type==='inc'?'inc-cat-list':'exp-cat-list',type==='inc'?settings.incCats:settings.expCats,type);};
 document.getElementById('inc-cat-add').addEventListener('click',()=>{const v=document.getElementById('inc-cat-new').value.trim();if(!v){toast('カテゴリ名を入力してください');return;}settings.incCats.push(v);document.getElementById('inc-cat-new').value='';renderCatList('inc-cat-list',settings.incCats,'inc');});
 document.getElementById('exp-cat-add').addEventListener('click',()=>{const v=document.getElementById('exp-cat-new').value.trim();if(!v){toast('カテゴリ名を入力してください');return;}settings.expCats.push(v);document.getElementById('exp-cat-new').value='';renderCatList('exp-cat-list',settings.expCats,'exp');});
-document.getElementById('save-settings').addEventListener('click',saveSettings);
+document.getElementById('save-settings').addEventListener('click',()=>{
+  settings.incomeTarget=parseInt(document.getElementById('income-target-input').value)||0;
+  saveSettings();
+});
 // カレンダー
 const DOW=['日','月','火','水','木','金','土'];
 function renderCalendar(){

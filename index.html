@@ -82,6 +82,11 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
 #login-screen h1{font-size:24px;font-weight:700;margin-bottom:8px;}
 #login-screen p{font-size:14px;opacity:.8;margin-bottom:32px;}
 #login-btn{background:#fff;color:var(--acc);border:none;border-radius:14px;padding:14px 32px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+/* 収入目標バー */
+#income-progress{padding:8px 16px 0;display:none;}
+.ip-bar{height:6px;background:rgba(255,255,255,0.2);border-radius:99px;overflow:hidden;margin-bottom:4px;}
+.ip-bar-fill{height:100%;border-radius:99px;transition:width .4s;}
+.ip-label{font-size:10px;color:rgba(255,255,255,0.7);text-align:right;}
 /* カード予算バー */
 .card-budget-wrap{padding:12px 16px 0;}
 .card-budget-title{font-size:12px;font-weight:700;color:var(--t3);margin-bottom:8px;letter-spacing:.04em;}
@@ -179,6 +184,10 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           <div class="sum-card"><div class="sum-l">支出</div><div class="sum-v" id="h-exp">¥0</div></div>
           <div class="sum-card"><div class="sum-l">残高</div><div class="sum-v" id="h-bal">¥0</div></div>
         </div>
+      <div id="income-progress">
+        <div class="ip-bar"><div class="ip-bar-fill"></div></div>
+        <div class="ip-label"></div>
+      </div>
       </div>
       <div id="card-budget-section" class="card-budget-wrap" style="padding-bottom:90px;"></div>
     </div>
@@ -517,8 +526,24 @@ function renderSum(){
   const inc=records.filter(r=>r.type==='inc').reduce((s,r)=>s+r.amount,0);
   const exp=records.filter(r=>r.type==='exp').reduce((s,r)=>s+r.amount,0);
   const bal=inc-exp;
-  document.getElementById('h-inc').textContent=fmt(inc);document.getElementById('h-exp').textContent=fmt(exp);
+  // カード予算合計を目標収入として計算
+  const target=Object.values(settings.cardBudgets||{}).reduce((s,v)=>s+(v||0),0);
+  document.getElementById('h-inc').textContent=fmt(inc)+(target>0?` / ${fmt(target)}`:'');
+  document.getElementById('h-exp').textContent=fmt(exp);
   const be=document.getElementById('h-bal');be.textContent=fmt(bal);be.style.color=bal>=0?'#a8f0d0':'#ffb5a0';
+  // 目標達成率バー
+  const prog=document.getElementById('income-progress');
+  if(prog){
+    if(target>0){
+      const pct=Math.min(100,Math.round(inc/target*100));
+      prog.style.display='block';
+      prog.querySelector('.ip-bar-fill').style.width=pct+'%';
+      prog.querySelector('.ip-bar-fill').style.background=pct>=100?'#4ac090':'#a8f0d0';
+      prog.querySelector('.ip-label').textContent=`目標達成率 ${pct}%`;
+    } else {
+      prog.style.display='none';
+    }
+  }
 }
 function hiHtml(r,withDel){
   const s=r.type==='inc'?'+':'-';const cl=r.type==='inc'?'var(--inc)':'var(--exp)';

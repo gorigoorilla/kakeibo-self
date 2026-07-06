@@ -176,6 +176,7 @@ body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;color:v
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="hd-sync" id="sync-label">同期中...</div>
+<button id="fixed-btn" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:11px;font-family:inherit;border-radius:99px;padding:5px 10px;cursor:pointer;">固定費追加</button>
 <button id="user-btn">ログアウト</button>
           </div>
         </div>
@@ -371,6 +372,19 @@ document.getElementById('login-btn').addEventListener('click',async()=>{
   catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/popup-closed-by-user'){try{await signInWithRedirect(auth,provider);}catch(e2){}}}
 });
 document.getElementById('user-btn').addEventListener('click',async()=>{if(confirm('ログアウトしますか？'))await signOut(auth);});
+document.getElementById('fixed-btn').addEventListener('click',async()=>{
+  if(!settings.fixedExp||!settings.fixedExp.length){toast('固定費が登録されてへんわ');return;}
+  const toApply=settings.fixedExp.filter(f=>f.freq==='monthly'||(f.freq==='yearly'&&f.month===(cm+1)));
+  if(!toApply.length){toast('この月に該当する固定費なし');return;}
+  const existingNotes=records.filter(r=>r.isFixed).map(r=>r.note||'');
+  let added=0;
+  for(const f of toApply){
+    if(existingNotes.includes(f.name+'（固定費）'))continue;
+    await addDoc(recCol(),{type:'exp',amount:f.amount,cat:f.cat,card:f.card||'現金',note:f.name+'（固定費）',year:cy,month:cm,createdAt:new Date(cy,cm,1).getTime(),isFixed:true});
+    existingNotes.push(f.name+'（固定費）');added++;
+  }
+  toast(added>0?`固定費 ${added}件を追加しました ✓`:'すでに全件追加済みやで');
+});
 
 getRedirectResult(auth).catch(()=>{});
 let loginProcessed=false;
@@ -385,7 +399,7 @@ onAuthStateChanged(auth,async user=>{
     applySettings();
     subscribe();
     initDateInputs();
-    // 固定費はsubscribeのonSnapshot内で実行
+
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -507,25 +521,17 @@ function renderFixedList(){
 }
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function initDateInputs(){const t=todayStr();const id=document.getElementById('inc-date');const ed=document.getElementById('exp-date');if(id)id.value=t;if(ed)ed.value=t;}
-let firstLoad=true;
 function subscribe(){
   if(!uid)return;if(unsubscribe)unsubscribe();
-  firstLoad=true;
-  fixedDoneMonths.delete(`${cy}-${cm}`);
   const q=query(recCol(),where('year','==',cy),where('month','==',cm));
   unsubscribe=onSnapshot(q,snap=>{
     records=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.createdAt-a.createdAt);
     document.getElementById('sync-label').textContent='✓ 同期済み';
     renderAll();
-    // 初回読み込み時だけ固定費チェック
-    if(firstLoad){
-      firstLoad=false;
-      applyFixedExpenses(cy,cm);
-    }
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
-function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}const _y=cy,_m=cm;subscribe();applyFixedExpenses(_y,_m);}
+function changeMonth(delta){cm+=delta;if(cm<0){cm=11;cy--;}else if(cm>11){cm=0;cy++;}subscribe();}
 document.getElementById('pm').addEventListener('click',()=>changeMonth(-1));
 document.getElementById('nm').addEventListener('click',()=>changeMonth(1));
 document.getElementById('pm2').addEventListener('click',()=>changeMonth(-1));

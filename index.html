@@ -369,8 +369,7 @@ onAuthStateChanged(auth,async user=>{
     applySettings();
     subscribe();
     initDateInputs();
-    const _now=new Date();
-    applyFixedExpenses(_now.getFullYear(),_now.getMonth());
+    // 固定費はsubscribeのonSnapshot内で実行
     document.getElementById('loading').style.display='none';
     document.getElementById('app').style.display='flex';
   } else {
@@ -492,12 +491,20 @@ function renderFixedList(){
 }
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function initDateInputs(){const t=todayStr();const id=document.getElementById('inc-date');const ed=document.getElementById('exp-date');if(id)id.value=t;if(ed)ed.value=t;}
+let firstLoad=true;
 function subscribe(){
   if(!uid)return;if(unsubscribe)unsubscribe();
+  firstLoad=true;
   const q=query(recCol(),where('year','==',cy),where('month','==',cm));
   unsubscribe=onSnapshot(q,snap=>{
     records=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.createdAt-a.createdAt);
-    document.getElementById('sync-label').textContent='✓ 同期済み';renderAll();
+    document.getElementById('sync-label').textContent='✓ 同期済み';
+    renderAll();
+    // 初回読み込み時だけ固定費チェック
+    if(firstLoad){
+      firstLoad=false;
+      applyFixedExpenses(cy,cm);
+    }
   },()=>{document.getElementById('sync-label').textContent='オフライン';});
 }
 function setLabel(){const t=cy+'年'+(cm+1)+'月';document.getElementById('ml').textContent=t;const ml2=document.getElementById('ml2');if(ml2)ml2.textContent=t;}
@@ -675,15 +682,12 @@ async function applyFixedExpenseRange(f){
   if(added>0)toast(`${f.name}を${added}ヶ月分反映しました ✓`);
 }
 
-// 指定月に固定費を反映（settingsに反映済み月を記録）
+// 指定月に固定費を反映（recordsで重複チェック）
 async function applyFixedExpenses(ty,tm){
   if(fixedRunning)return;
   if(!settings.fixedExp||!settings.fixedExp.length)return;
   const key=`${ty}-${tm}`;
   if(fixedDoneMonths.has(key))return;
-  // settingsに保存された反映済み月をチェック
-  if(!settings.appliedMonths)settings.appliedMonths=[];
-  if(settings.appliedMonths.includes(key))return;
   fixedRunning=true;
   fixedDoneMonths.add(key);
   try{
@@ -691,12 +695,9 @@ async function applyFixedExpenses(ty,tm){
       f.freq==='monthly'||(f.freq==='yearly'&&f.month===(tm+1))
     );
     if(!toApply.length)return;
-    // 先にsettingsにフラグ保存
-    settings.appliedMonths.push(key);
-    await setDoc(settingsDoc(),settings);
-    // recordsで重複チェックして追加
+    // その月のrecordsにある固定費ノートを確認
     const existingNotes=records
-      .filter(r=>r.year===ty&&r.month===tm)
+      .filter(r=>r.year===ty&&r.month===tm&&r.isFixed)
       .map(r=>r.note||'');
     let added=0;
     for(const f of toApply){
@@ -707,7 +708,6 @@ async function applyFixedExpenses(ty,tm){
     }
     if(added>0)toast(`固定費 ${added}件を反映しました ✓`);
   }catch(e){
-    settings.appliedMonths=settings.appliedMonths.filter(k=>k!==key);
     fixedDoneMonths.delete(key);
     console.error('fixed:',e);
   }finally{

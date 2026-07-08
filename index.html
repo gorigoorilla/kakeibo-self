@@ -626,8 +626,8 @@ function renderCardsGrid(){
     return `<div class="card" onclick="window.showCardDetail('${c}')">
       <div class="card-icon" style="background:${color}22;font-size:20px;">💳</div>
       <div class="card-name">${c}</div>
-      <div class="card-used">${fmt(use)} <span style="font-size:12px;color:var(--t3);font-weight:500;">使用</span></div>
-      <div class="card-budget" style="color:${remain<0?'var(--red)':'var(--t3)'}">${remainLabel}</div>
+      <div class="card-used" style="color:${remain<0?'var(--red)':'var(--t1)'}">${remainLabel}</div>
+      <div class="card-budget">使用 ${fmt(use)}</div>
       <div class="card-bar" style="background:var(--bd);"><div class="card-bar-fill" style="width:${remainPct}%;background:${color};"></div></div>
     </div>`;
   }).join('');

@@ -82,15 +82,18 @@ body{font-family:'DM Sans','Noto Sans JP',-apple-system,sans-serif;color:var(--t
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .sec-title{font-size:12px;font-weight:700;color:var(--t2);letter-spacing:.06em;text-transform:uppercase;}
 /* Record item */
-.rec{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .1s;}
+.rec{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .1s;background:var(--sur);}
 .rec:last-child{border-bottom:none;}
 .rec:active{background:var(--bg);}
-.rec-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.rec-ico{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:#fff5f7;}
 .rec-body{flex:1;min-width:0;}
-.rec-cat{font-size:14px;font-weight:600;color:var(--t1);}
-.rec-meta{font-size:11px;color:var(--t3);margin-top:1px;}
-.rec-amt{font-size:15px;font-weight:700;color:var(--red);}
-.rec-del{border:none;background:none;color:var(--t3);font-size:20px;padding:0 4px;cursor:pointer;flex-shrink:0;}
+.rec-cat{font-size:15px;font-weight:600;color:var(--t1);}
+.rec-meta{font-size:12px;color:var(--t3);margin-top:3px;display:flex;gap:6px;align-items:center;}
+.rec-meta-dot{width:3px;height:3px;border-radius:50%;background:var(--bd);}
+.rec-amt{font-size:17px;font-weight:800;color:var(--red);}
+.rec-del{border:none;background:var(--bg);color:var(--t3);font-size:16px;padding:0;cursor:pointer;flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.hist-section{margin-bottom:0;}
+.hist-date-label{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.06em;padding:12px 16px 6px;background:var(--bg);}
 .empty{text-align:center;padding:3rem 1rem;color:var(--t3);font-size:14px;}
 
 /* Input page */
@@ -236,9 +239,9 @@ body{font-family:'DM Sans','Noto Sans JP',-apple-system,sans-serif;color:var(--t
           <button class="mnav" id="nm">&#8250;</button>
         </div>
         <div class="big-num">
-          <div class="big-label">今月の使用額</div>
-          <div class="big-val" id="h-total">¥0</div>
-          <div class="big-sub" id="h-remain"></div>
+          <div class="big-label">今月の残り</div>
+          <div class="big-val" id="h-remain">¥0</div>
+          <div class="big-sub" id="h-total"></div>
         </div>
         <div class="budget-bar"><div class="budget-fill" id="budget-fill" style="width:0%"></div></div>
         <div class="budget-stats">
@@ -294,7 +297,7 @@ body{font-family:'DM Sans','Noto Sans JP',-apple-system,sans-serif;color:var(--t
 
     <!-- 履歴 -->
     <div class="pg" id="pg-hist">
-      <div style="padding-bottom:80px;" id="hist-list"></div>
+      <div id="hist-list" style="padding-bottom:80px;background:var(--bg);"></div>
     </div>
 
     <!-- カレンダー -->
@@ -577,24 +580,29 @@ function setLabels(){
 function renderHome(){
   const total=records.reduce((s,r)=>s+r.amount,0);
   const budget=settings.totalBudget||0;
-  // 使用額を表示
-  document.getElementById('h-total').textContent=fmt(total);
   if(budget>0){
-    const remain=budget-total; // 残り = 予算 - 使用額
-    const pct=Math.min(100,Math.round(total/budget*100)); // 使用率
-    // 残りがマイナスなら赤、80%超えたら黄、それ以外緑
+    const remain=budget-total;
+    const pct=Math.min(100,Math.round(total/budget*100));
+    const remainPct=Math.max(0,100-pct);
     const barColor=remain<0?'#f43f5e':pct>=80?'#f59e0b':'#10b981';
-    document.getElementById('h-remain').textContent=remain>=0?`残り ${fmt(remain)}`:`超過 ${fmt(-remain)}`;
-    document.getElementById('h-remain').style.color=remain>=0?'rgba(255,255,255,0.6)':'#f43f5e';
-    document.getElementById('budget-fill').style.width=pct+'%';
+    // 残りをでかく表示
+    const remainEl=document.getElementById('h-remain');
+    remainEl.textContent=remain>=0?fmt(remain):`-${fmt(-remain)}`;
+    remainEl.style.color=remain<0?'#f43f5e':'#fff';
+    // 使用額は小さく
+    document.getElementById('h-total').textContent=`使用 ${fmt(total)}`;
+    // バーは残り量を表示（右から減る）
+    document.getElementById('budget-fill').style.width=remainPct+'%';
     document.getElementById('budget-fill').style.background=barColor;
     document.getElementById('h-budget-label').innerHTML=`予算 <strong>${fmt(budget)}</strong>`;
-    document.getElementById('h-pct').textContent=pct+'% 使用';
+    document.getElementById('h-pct').textContent=remain<0?'予算超過！':pct+'% 使用';
   } else {
-    document.getElementById('h-remain').textContent='設定タブで予算を設定してね';
+    document.getElementById('h-remain').textContent='--';
+    document.getElementById('h-remain').style.color='rgba(255,255,255,0.4)';
+    document.getElementById('h-total').textContent=`使用 ${fmt(total)}`;
     document.getElementById('budget-fill').style.width='0%';
     document.getElementById('h-budget-label').textContent='予算未設定';
-    document.getElementById('h-pct').textContent='';
+    document.getElementById('h-pct').textContent='設定で予算を設定してね';
   }
   renderCardsGrid();
   renderRecentList();
@@ -626,12 +634,18 @@ function renderCardsGrid(){
 }
 function recHtml(r,withDel){
   const d=new Date(r.createdAt);
-  const ds=(d.getMonth()+1)+'/'+d.getDate();
+  const ds=(d.getMonth()+1)+'/'+(d.getDate());
   const del=withDel?`<button class="rec-del" onclick="event.stopPropagation();window.delR('${r.id}')">×</button>`:'';
+  const metas=[ds,r.card,r.note].filter(Boolean);
   return `<div class="rec" onclick="window.editR('${r.id}')">
-    <div class="rec-ico" style="background:#fff0f3;">${CI[r.cat]||'📦'}</div>
-    <div class="rec-body"><div class="rec-cat">${r.cat}</div><div class="rec-meta">${ds}${r.note?' · '+r.note:''}${r.card?' · '+r.card:''}</div></div>
-    <div class="rec-amt">-${fmt(r.amount)}</div>${del}
+    <div class="rec-ico">${CI[r.cat]||'📦'}</div>
+    <div class="rec-body">
+      <div class="rec-cat">${r.cat}</div>
+      <div class="rec-meta">${metas.join('<span class="rec-meta-dot"></span>')}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="rec-amt">-${fmt(r.amount)}</div>${del}
+    </div>
   </div>`;
 }
 function renderRecentList(){
@@ -641,7 +655,23 @@ function renderRecentList(){
 }
 function renderHist(){
   const el=document.getElementById('hist-list');
-  el.innerHTML=records.length?records.map(r=>recHtml(r,true)).join(''):'<div class="empty">まだ記録なし</div>';
+  if(!records.length){el.innerHTML='<div class="empty">まだ記録なし</div>';return;}
+  // 日付でグループ化
+  const groups={};
+  records.forEach(r=>{
+    const d=new Date(r.createdAt);
+    const key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    const label=(d.getMonth()+1)+'月'+d.getDate()+'日';
+    if(!groups[key])groups[key]={label,items:[]};
+    groups[key].items.push(r);
+  });
+  el.innerHTML=Object.values(groups).map(g=>`
+    <div class="hist-section">
+      <div class="hist-date-label">${g.label}</div>
+      <div style="background:var(--sur);margin:0 12px;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        ${g.items.map(r=>recHtml(r,true)).join('')}
+      </div>
+    </div>`).join('');
 }
 function renderChart(){
   if(pieInst){pieInst.destroy();pieInst=null;}
@@ -737,7 +767,7 @@ window.showCardDetail=function(card){
     const total=items.reduce((s,r)=>s+r.amount,0);
     document.getElementById('card-detail-list').innerHTML=
       `<div style="text-align:center;padding:8px 0 12px;font-size:14px;font-weight:700;color:var(--red)">合計 ${fmt(total)}</div>`+
-      items.map(r=>{const d=new Date(r.createdAt);return `<div class="detail-item"><div class="detail-ico" style="background:#fff0f3;">${CI[r.cat]||'📦'}</div><div class="detail-body"><div class="detail-cat">${r.cat}</div><div class="detail-note">${(d.getMonth()+1)+'/'+d.getDate()}${r.note?' · '+r.note:''}</div></div><div class="detail-amt">${fmt(r.amount)}</div></div>`;}).join('');
+      items.map(r=>{const d=new Date(r.createdAt);return `<div class="detail-item" onclick="document.getElementById('card-detail-bg').classList.remove('on');setTimeout(()=>window.editR('${r.id}'),100);" style="cursor:pointer;"><div class="detail-ico" style="background:#fff0f3;">${CI[r.cat]||'📦'}</div><div class="detail-body"><div class="detail-cat">${r.cat}</div><div class="detail-note">${(d.getMonth()+1)+'/'+d.getDate()}${r.note?' · '+r.note:''}</div></div><div style="text-align:right;"><div class="detail-amt">${fmt(r.amount)}</div><div style="font-size:10px;color:var(--t3);">タップで編集</div></div></div>`;}).join('');
   }
   document.getElementById('card-detail-bg').classList.add('on');
 };
